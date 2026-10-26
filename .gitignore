@@ -1,0 +1,21 @@
+# build output
+/dist/
+*.o
+*.o.d
+*.ko
+*.mod
+*.mod.c
+*.mod.o
+.*.cmd
+*.cmd
+modules.order
+.modules.order.cmd
+Module.symvers
+.Module.symvers.cmd
+.tmp_versions/
+
+# rust helpers
+target/
+
+# local backup / old trees
+.old/

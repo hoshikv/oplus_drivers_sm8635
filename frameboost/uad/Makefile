@@ -1,0 +1,29 @@
+GCOV_PROFILE := y
+LINUXINCLUDE += -I$(srctree)/
+
+obj-$(CONFIG_OPLUS_CPU_FREQ_GOV_UAG) += cpufreq_uag.o
+cpufreq_uag-y += cpufreq_uag_main.o
+cpufreq_uag-$(CONFIG_UAG_NONLINEAR_FREQ_CTL) += nonlinear_opp_cap.o
+cpufreq_uag-$(CONFIG_OPLUS_UAG_AMU_AWARE) += stall_util_cal.o
+cpufreq_uag-$(CONFIG_OPLUS_FEATURE_TOUCH_BOOST) += touch_boost.o
+
+obj-$(CONFIG_UA_KERNEL_CPU_IOCTL) += ua_cpu_ioctl.o
+ua_cpu_ioctl-y += ua_ioctl/ua_ioctl_common.o
+ua_cpu_ioctl-$(CONFIG_OPLUS_FEATURE_FRAME_BOOST) += ua_ioctl/frame_ioctl.o
+ua_cpu_ioctl-y += ua_ioctl/touch_ioctl.o
+ccflags-y += -I$(src)
+ccflags-y += -DCONFIG_OPLUS_SYSTEM_KERNEL_QCOM=1
+ccflags-y += -DCONFIG_OPLUS_CPU_FREQ_GOV_UAG=1
+ccflags-y += -DCONFIG_UA_KERNEL_CPU_IOCTL=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_FRAME_BOOST=1
+ccflags-y += -DCONFIG_UAG_NONLINEAR_FREQ_CTL=1
+ccflags-y += -DCONFIG_OPLUS_UAG_USE_TL=1
+ccflags-y += -DCONFIG_OPLUS_MULTI_LV_TL=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_VT_CAP=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_SCHED_ASSIST=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_SCHED_DDL=1
+ccflags-y += -DCONFIG_OPLUS_SCHED_GROUP_OPT=1
+ccflags-y += -DCONFIG_OPLUS_CPU_AUDIO_PERF=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_LOADBALANCE=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_PIPELINE=1
+ccflags-y += -DCONFIG_BLOCKIO_UX_OPT=1

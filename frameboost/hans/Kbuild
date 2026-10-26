@@ -1,0 +1,22 @@
+#QCOM in tree
+LINUXINCLUDE += -I$(srctree)/
+ifeq ($(CONFIG_OPLUS_FEATURE_HANS), m)
+obj-$(CONFIG_OPLUS_FEATURE_HANS)          += oplus_hans.o
+oplus_hans-objs                           += hans_help.o hans.o hans_netfilter.o
+endif
+#MTK in tree
+ifeq ($(CONFIG_OPLUS_FEATURE_HANS_GKI), m)
+obj-$(CONFIG_OPLUS_FEATURE_HANS_GKI)          += oplus_hans.o
+oplus_hans-objs                           += hans_help.o hans.o hans_netfilter.o
+endif
+ccflags-y += -I$(src)
+ccflags-y += -DCONFIG_OPLUS_SYSTEM_KERNEL_QCOM=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_HANS=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_SCHED_ASSIST=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_SCHED_DDL=1
+ccflags-y += -DCONFIG_OPLUS_SCHED_GROUP_OPT=1
+ccflags-y += -DCONFIG_OPLUS_CPU_AUDIO_PERF=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_LOADBALANCE=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_PIPELINE=1
+ccflags-y += -DCONFIG_BLOCKIO_UX_OPT=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_FRAME_BOOST=1

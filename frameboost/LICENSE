@@ -1,0 +1,13 @@
+SPDX-License-Identifier: GPL-2.0-only
+
+The driver sources in this repository (eas_opt/, frame_boost/, qos_sched/, sched_assist/, sched_tune/, uad/, hans/) are derived from
+the OnePlus / OPLUS Linux kernel driver tree:
+
+  https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8635
+  branch: oneplus/sm8635_b_16.0.0_nord_5   (path: vendor/oplus/kernel/cpu, vendor/oplus/kernel/hans)
+
+They are licensed under the GNU General Public License v2 (GPL-2.0) as part of
+the Linux kernel, per the SPDX headings in each source file and the Linux
+kernel COPYING.
+
+Any modifications made for this port keep the upstream GPL-2.0 license.

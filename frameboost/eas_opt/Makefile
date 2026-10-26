@@ -1,0 +1,19 @@
+GCOV_PROFILE := y
+obj-$(CONFIG_OPLUS_FEATURE_EAS_OPT) += oplus_bsp_eas_opt.o
+
+oplus_bsp_eas_opt-y := eas_opt.o
+oplus_bsp_eas_opt-$(CONFIG_OPLUS_FEATURE_VT_CAP) += oplus_cap.o
+oplus_bsp_eas_opt-$(CONFIG_OPLUS_CPUFREQ_IOWAIT_PROTECT) += oplus_iowait.o
+ccflags-y += -I$(src)
+ccflags-y += -DCONFIG_OPLUS_SYSTEM_KERNEL_QCOM=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_EAS_OPT=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_VT_CAP=1
+ccflags-y += -DCONFIG_OPLUS_CPUFREQ_IOWAIT_PROTECT=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_SCHED_ASSIST=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_SCHED_DDL=1
+ccflags-y += -DCONFIG_OPLUS_SCHED_GROUP_OPT=1
+ccflags-y += -DCONFIG_OPLUS_CPU_AUDIO_PERF=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_LOADBALANCE=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_PIPELINE=1
+ccflags-y += -DCONFIG_BLOCKIO_UX_OPT=1
+ccflags-y += -DCONFIG_OPLUS_FEATURE_FRAME_BOOST=1
