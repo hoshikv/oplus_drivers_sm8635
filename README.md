@@ -178,5 +178,4 @@ it or flash the updated image.
 
 ## License
 
-GPL-2.0. Original sources (c) OPPO/OnePlus; port changes keep the upstream
-license. See `LICENSE`.
+This project is licensed under the [GNU General Public License v2.0](LICENSE).
