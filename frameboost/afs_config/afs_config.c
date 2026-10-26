@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * oplus_afs_config - Oplus AFS (FScene) config proc nodes for peridot.
+ * oplus_afs_config - Oplus AFS (FScene) config proc nodes for SM8635.
  *
  * The ColorOS userspace lib (system_ext/lib64/afsConfig.so, loaded by
  * system_server / SystemUI / launcher) opens

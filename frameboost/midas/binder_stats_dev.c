@@ -26,7 +26,7 @@
 #include <linux/rtc.h>
 #include <linux/notifier.h>
 #include <linux/rbtree.h>
-/* peridot 6.1 (GKI) has no public <linux/android/binder.h>; the binder
+/* SM8635 6.1 (GKI) has no public <linux/android/binder.h>; the binder
  * internals live in drivers/android/binder_internal.h. This module only uses
  * the android_vh_binder_* vendor hooks (all struct task_struct * based) and
  * declares its own stats structs, so no binder header is required here. */

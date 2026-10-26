@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# build.sh — build the full OPlus driver set for peridot (sm8635, k6.1).
+# build.sh — build the full OPlus driver set for sm8635 (kernel 6.1).
 #
 # The repo is organised by function:
 #

@@ -46,7 +46,7 @@
 
 /*
  * Stubs for the OPLUS kernel-side cpufreq_health symbols (see
- * linux/cpufreq_health.h).  Peridot (SM8635) does not ship the OPLUS
+ * linux/cpufreq_health.h).  SM8635 (SM8635) does not ship the OPLUS
  * cpufreq_health subsystem that normally provides these, so this module
  * carries its own copies.  freq_to_voltage() uses the frequency as a
  * monotonic voltage proxy so the cobuck heuristic stays well-defined.
@@ -76,7 +76,7 @@ static unsigned int default_target_loads_sys[] = {DEFAULT_MULTI_TL_SYS};
 #ifdef CONFIG_OPLUS_SYSTEM_KERNEL_QCOM
 /*
  * The stock OPLUS QCOM kernel defines WALT_CPUFREQ_IOWAIT in its WALT
- * cpufreq interface.  Peridot's WALT (kernel/sched/walt/walt.h) only carries
+ * cpufreq interface.  SM8635's WALT (kernel/sched/walt/walt.h) only carries
  * the ROLLOVER/CONTINUE/... flags and never signals IOWAIT in callback flags,
  * so fall back to the standard schedutil flag to keep the same semantics as
  * the non-VT_CAP path.

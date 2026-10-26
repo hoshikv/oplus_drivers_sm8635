@@ -770,7 +770,7 @@ void tasktrack_init(void)
 	tasktrack_timer.function = tasktrack_timer_handler;
 
 	/*
-	 * Stubbed: the running peridot kernel ships oplus_bsp_sched_assist
+	 * Stubbed: the running SM8635 kernel ships oplus_bsp_sched_assist
 	 * without CONFIG_OPLUS_FEATURE_CPU_JANKINFO, so it never exports
 	 * jank_update_task_status. Registering the callback here would make
 	 * this module fail to load with "Unknown symbol jank_update_task_status".

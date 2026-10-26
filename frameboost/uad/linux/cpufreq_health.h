@@ -4,12 +4,12 @@
  *
  * Stub for the OPLUS cpufreq_health header. The real header lives in the
  * proprietary OnePlus vendor tree (kernel/oplus_cpu/cpufreq_health/), which is
- * not shipped in any OSS release. Peridot has no CONFIG_OPLUS_FEATURE_OCH, so
+ * not shipped in any OSS release. SM8635 has no CONFIG_OPLUS_FEATURE_OCH, so
  * nothing uses symbols from it; the include is kept only to satisfy the
  * unconditional include in uad/cpufreq_uag.h.
  *
  * On a stock OPLUS kernel these symbols are exported from the cpufreq_health
- * subsystem.  Peridot (SM8635) does not carry that code, so we declare them
+ * subsystem.  SM8635 (SM8635) does not carry that code, so we declare them
  * here and provide minimal stubs in cpufreq_uag_main.c.  freq_to_voltage()
  * returns the frequency value as a monotonic proxy for voltage, which keeps
  * the cobuck heuristic working (it only cares about monotonicity).  The bool

@@ -1,6 +1,6 @@
 #!/system/bin/sh
 
-# Minimal hybridswap init for Redmi Turbo 3 (PKG110/peridot)
+# Minimal hybridswap init for SM8635 devices
 # Place at: /odm/bin/init_hybridswap.sh
 # Requires: init rc to call this on boot_completed
 
