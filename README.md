@@ -1,6 +1,6 @@
-# Oplus drivers sm8635 (6.1 kernel )
+# oplus_drivers_sm8635
 
-Loadable oplus module drivers for sm8635 or devices using 6.1 kernel
+Loadable oplus drivers modules for sm8635 or devices using 6.1 kernel
 including 71 drivers modules in total. Sources are ported from OnePlusOSS
 `android_kernel_modules_and_devicetree_oneplus_sm8635`
 (`oneplus/sm8635_b_16.0.0_nord_5`) and built against the 6.1 GKI KMI.
