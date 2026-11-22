@@ -85,7 +85,9 @@ FB="$FB_STAGE/oplus_cpu"          # -> <../kernel/oplus_cpu/...>
 HS_M="$HS_STAGE/oplus_mm"         # -> <../kernel/oplus_mm/...> / -I$(srctree)/mm/oplus_mm
 INC="$INCBASE"                    # -> <soc/oplus/...>, <linux/...>, <trace/events/...>
 
-rm -rf "$STAGE"
+if [[ "${CLEAN:-0}" == "1" ]]; then
+  rm -rf "$STAGE"
+fi
 mkdir -p \
   "$FB/sched" \
   "$HS_M" \
@@ -98,16 +100,18 @@ ln -sfn "$INCLUDE_DIR/soc" "$INC/soc"
 
 copy_module() { # $1=src dir  $2=dst dir
   local src="$1" dst="$2"
-  rm -rf "$dst"
-  mkdir -p "$(dirname "$dst")"
-  cp -a "$src" "$dst"
-  find "$dst" -type f \
-    \( -name '*.o' -o -name '*.ko' -o -name '*.mod' -o -name '*.mod.c' \
-       -o -name '*.mod.o' -o -name '.*.cmd' -o -name '*.o.d' \
-       -o -name 'Module.symvers' -o -name 'modules.order' \
-       -o -name '.modules.order.cmd' -o -name '.Module.symvers.cmd' \) \
-    -delete
-  find "$dst" -type d -name '.tmp_versions' -prune -exec rm -rf {} +
+  local excl=(
+    --exclude='*.o' --exclude='*.ko' --exclude='*.mod'
+    --exclude='*.mod.c' --exclude='*.mod.o' --exclude='.*.cmd'
+    --exclude='*.o.d' --exclude='Module.symvers' --exclude='modules.order'
+    --exclude='.modules.order.cmd' --exclude='.Module.symvers.cmd'
+    --exclude='.tmp_versions/'
+  )
+  mkdir -p "$dst"
+  if [[ -f "$dst/Makefile" || -f "$dst/Kbuild" ]]; then
+    excl+=(--exclude='/Makefile' --exclude='/Kbuild')
+  fi
+  rsync -a --delete "${excl[@]}" "$src/" "$dst/"
 }
 
 stage_module() { # $1=category  $2=module ; echoes staged path
@@ -121,15 +125,15 @@ stage_module() { # $1=category  $2=module ; echoes staged path
 # ---------------------------------------------------------------------------
 # category-A cpu headers using <linux/...> / <trace/events/...> style includes
 [[ -f "$FB_DIR/cpufreq_bouncing/cpufreq_bouncing.h" ]] && \
-  cp -f "$FB_DIR/cpufreq_bouncing/cpufreq_bouncing.h" "$INC/linux/"
+  cp -p "$FB_DIR/cpufreq_bouncing/cpufreq_bouncing.h" "$INC/linux/"
 [[ -f "$FB_DIR/cpufreq_effiency/cpufreq_effiency.h" ]] && \
-  cp -f "$FB_DIR/cpufreq_effiency/cpufreq_effiency.h" "$INC/linux/"
+  cp -p "$FB_DIR/cpufreq_effiency/cpufreq_effiency.h" "$INC/linux/"
 [[ -f "$FB_DIR/oplus_omrg/oplus_omrg_trace.h" ]] && \
-  cp -f "$FB_DIR/oplus_omrg/oplus_omrg_trace.h" "$INC/trace/events/"
+  cp -p "$FB_DIR/oplus_omrg/oplus_omrg_trace.h" "$INC/trace/events/"
 [[ -f "$FB_DIR/oplus_omrg/oplus_omrg.h" ]] && \
-  cp -f "$FB_DIR/oplus_omrg/oplus_omrg.h" "$INC/linux/"
+  cp -p "$FB_DIR/oplus_omrg/oplus_omrg.h" "$INC/linux/"
 [[ -f "$FB_DIR/cpufreq_health/cpufreq_health.h" ]] && \
-  cp -f "$FB_DIR/cpufreq_health/cpufreq_health.h" "$INC/linux/cpufreq_health.h"
+  cp -p "$FB_DIR/cpufreq_health/cpufreq_health.h" "$INC/linux/cpufreq_health.h"
 
 # frameboost sched stack under oplus_cpu/sched
 for d in sched_tune sched_assist eas_opt frame_boost qos_sched sched_info; do
@@ -225,6 +229,7 @@ mbuild() {
     CONFIG_ARCH_PINEAPPLE=y \
     KCFLAGS="$kcflags" \
     M="$M" "$@" modules >"$logf" 2>&1 || {
+      find "$M" -type f -name '*.ko' -delete
       echo "  ! $label FAILED (see $logf)"
       grep -nE "error:|fatal|undefined|undeclared|No such|No rule" "$logf" | head -20 || true
       if [[ "$STRICT" == "1" ]]; then echo "STRICT=1 -> abort"; exit 1; fi
@@ -270,7 +275,7 @@ mbuild sched_tune "$FB/sched/sched_tune" "" "" \
   CONFIG_OPLUS_SCHED_TUNE=m CONFIG_OPLUS_SYSTEM_KERNEL_QCOM=y
 cache_symvers "$FB/sched/sched_tune" sched_tune
 
-mbuild sched_assist "$FB/sched/sched_assist" "$OUT/msym/sched_tune.symvers" "" \
+mbuild sched_assist "$FB/sched/sched_assist" "$OUT/msym/sched_tune.symvers" "${NEW_KCFLAGS[*]}" \
   CONFIG_OPLUS_FEATURE_SCHED_ASSIST=m CONFIG_OPLUS_SYSTEM_KERNEL_QCOM=y \
   CONFIG_OPLUS_FEATURE_SCHED_DDL=y CONFIG_OPLUS_SCHED_GROUP_OPT=y \
   CONFIG_OPLUS_CPU_AUDIO_PERF=y CONFIG_OPLUS_FEATURE_LOADBALANCE=y \
@@ -282,15 +287,15 @@ mbuild eas_opt "$FB/sched/eas_opt" "$OUT/msym/sched_assist.symvers" "" \
   CONFIG_OPLUS_FEATURE_VT_CAP=y CONFIG_OPLUS_CPUFREQ_IOWAIT_PROTECT=y
 cache_symvers "$FB/sched/eas_opt" eas_opt
 
-mbuild frame_boost "$FB/sched/frame_boost" "$OUT/msym/sched_assist.symvers $OUT/msym/eas_opt.symvers" "" \
+mbuild frame_boost "$FB/sched/frame_boost" "$OUT/msym/sched_assist.symvers $OUT/msym/eas_opt.symvers" "${NEW_KCFLAGS[*]}" \
   CONFIG_OPLUS_FEATURE_FRAME_BOOST=m CONFIG_OPLUS_SYSTEM_KERNEL_QCOM=y
 cache_symvers "$FB/sched/frame_boost" frame_boost
 
-mbuild qos_sched "$FB/sched/qos_sched" "$OUT/msym/sched_assist.symvers $OUT/msym/frame_boost.symvers $OUT/msym/eas_opt.symvers" "" \
+mbuild qos_sched "$FB/sched/qos_sched" "$OUT/msym/sched_assist.symvers $OUT/msym/frame_boost.symvers $OUT/msym/eas_opt.symvers" "${NEW_KCFLAGS[*]}" \
   CONFIG_OPLUS_FEATURE_QOS_SCHED=m CONFIG_OPLUS_SYSTEM_KERNEL_QCOM=y
 cache_symvers "$FB/sched/qos_sched" qos_sched
 
-mbuild uad "$FB/uad" "$OUT/msym/sched_assist.symvers $OUT/msym/eas_opt.symvers $OUT/msym/frame_boost.symvers" "" \
+mbuild uad "$FB/uad" "$OUT/msym/sched_assist.symvers $OUT/msym/eas_opt.symvers $OUT/msym/frame_boost.symvers" "${NEW_KCFLAGS[*]}" \
   CONFIG_OPLUS_CPU_FREQ_GOV_UAG=m CONFIG_UA_KERNEL_CPU_IOCTL=m CONFIG_OPLUS_SYSTEM_KERNEL_QCOM=y \
   CONFIG_UAG_NONLINEAR_FREQ_CTL=y CONFIG_OPLUS_UAG_USE_TL=y CONFIG_OPLUS_MULTI_LV_TL=y \
   CONFIG_OPLUS_FEATURE_VT_CAP=y CONFIG_OPLUS_FEATURE_FRAME_BOOST=y
@@ -364,11 +369,11 @@ mbuild_cat midas frameboost midas "" "" \
 inject_defines "$FB/sched/task_load"  CONFIG_OPLUS_SYSTEM_KERNEL_QCOM CONFIG_OPLUS_FEATURE_TASK_LOAD  CONFIG_OPLUS_FEATURE_SCHED_ASSIST $FB_SCHED_FEAT
 inject_defines "$FB/sched/task_sched" CONFIG_OPLUS_SYSTEM_KERNEL_QCOM CONFIG_OPLUS_FEATURE_TASK_SCHED CONFIG_OPLUS_FEATURE_SCHED_ASSIST $FB_SCHED_FEAT
 
-mbuild task_load "$FB/sched/task_load" "$OUT/msym/sched_assist.symvers $OUT/msym/frame_boost.symvers $OUT/msym/eas_opt.symvers" "" \
+mbuild task_load "$FB/sched/task_load" "$OUT/msym/sched_assist.symvers $OUT/msym/frame_boost.symvers $OUT/msym/eas_opt.symvers" "${NEW_KCFLAGS[*]}" \
   CONFIG_OPLUS_FEATURE_TASK_LOAD=m
 cache_symvers "$FB/sched/task_load" task_load
 
-mbuild task_sched "$FB/sched/task_sched" "$OUT/msym/sched_assist.symvers $OUT/msym/frame_boost.symvers $OUT/msym/eas_opt.symvers" "" \
+mbuild task_sched "$FB/sched/task_sched" "$OUT/msym/sched_assist.symvers $OUT/msym/frame_boost.symvers $OUT/msym/eas_opt.symvers" "${NEW_KCFLAGS[*]}" \
   CONFIG_OPLUS_FEATURE_TASK_SCHED=m
 
 # zram_opt (zram tuning)
