@@ -2,6 +2,7 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/kernel.h>
+#include <linux/mm.h>
 #include <linux/proc_fs.h>
 #include <linux/fs.h>
 #include <linux/soc/qcom/smem.h>
@@ -90,7 +91,7 @@ char serial_no[] = "0";
 static void init_project_version(void)
 {
     /*for qcom's smem*/
-    size_t smem_size;
+    size_t smem_size = 0;
     void *smem_addr;
     char *PCB_version_name = NULL;
     uint16_t index = 0;
@@ -101,16 +102,13 @@ static void init_project_version(void)
         smem_addr = qcom_smem_get(QCOM_SMEM_HOST_ANY,
         SMEM_PROJECT,
         &smem_size);
-        if (IS_ERR(smem_addr)) {
+        if (IS_ERR_OR_NULL(smem_addr) || (unsigned long)smem_addr < PAGE_SIZE ||
+            smem_size < sizeof(ProjectInfoOCDT)) {
             pr_err("unable to acquire smem SMEM_PROJECT entry\n");
             return;
         }
 
         g_project = (ProjectInfoOCDT *)smem_addr;
-        if (g_project == ERR_PTR(-EPROBE_DEFER)) {
-            g_project = NULL;
-            return;
-        }
 
         do {
             if(pcb_str[index].version == g_project->nDataSCDT.PCB){
