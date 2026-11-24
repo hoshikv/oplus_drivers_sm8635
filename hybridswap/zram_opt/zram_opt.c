@@ -255,7 +255,7 @@ static ssize_t swappiness_para_write(struct file *file,
 {
 	char kbuf[PARA_BUF_LEN] = {'\0'};
 	char *str;
-	long val;
+	unsigned long val;
 
 	if (len > PARA_BUF_LEN - 1) {
 		pr_err("len %lu is too long\n", len);
@@ -296,18 +296,18 @@ static ssize_t swappiness_para_read(struct file *file,
 	char kbuf[PARA_BUF_LEN] = {'\0'};
 	int len;
 
-	len = snprintf(kbuf, PARA_BUF_LEN, "vm_swappiness: %d\n", g_swappiness);
-	len += snprintf(kbuf + len, PARA_BUF_LEN - len,
+	len = scnprintf(kbuf, PARA_BUF_LEN, "vm_swappiness: %d\n", g_swappiness);
+	len += scnprintf(kbuf + len, PARA_BUF_LEN - len,
 			"direct_swappiness: %d\n", g_direct_swappiness);
-	len += snprintf(kbuf + len, PARA_BUF_LEN - len,
+	len += scnprintf(kbuf + len, PARA_BUF_LEN - len,
 			"swapd_swappiness: %d\n", g_hybridswapd_swappiness);
 #ifdef CONFIG_DYNAMIC_TUNING_SWAPPINESS
-	len += snprintf(kbuf + len, PARA_BUF_LEN - len,
+	len += scnprintf(kbuf + len, PARA_BUF_LEN - len,
 			"kswapd_swappiness: %d\n",
 			tune_dynamic_swappines());
 #endif /* CONFIG_DYNAMIC_TUNING_SWAPPINESS */
 #if IS_ENABLED(CONFIG_OPLUS_BALANCE_ANON_FILE_RECLAIM)
-	len += snprintf(kbuf + len, PARA_BUF_LEN - len,
+	len += scnprintf(kbuf + len, PARA_BUF_LEN - len,
 			"balance_anon_file_reclaim: true\n");
 #endif /* CONFIG_OPLUS_BALANCE_ANON_FILE_RECLAIM */
 
