@@ -32,39 +32,37 @@ static struct proc_dir_entry    *oplus_freeze_hook_on_proc  = NULL;
 static bool ss_order_adv_enable = true;
 
 
-static void kp_handler_freeze_process(struct kprobe *kp, struct pt_regs *regs, unsigned long flags)
+static int kp_handler_freeze_process(struct kprobe *kp, struct pt_regs *regs)
 {
 	struct task_struct *g;
 	struct task_struct *pos = NULL, *ss = NULL;
+	unsigned long irqflags;
 
-	if(ss_order_adv_enable) {
-		rcu_read_lock();
+	if (ss_order_adv_enable) {
+		write_lock_irqsave(&tasklist_lock, irqflags);
 		for_each_process(g) {
-			if(!pos && !strncmp(g->comm, KHUNG_TASK_PROCESS, TASK_COMM_LEN)) {
+			if (!pos && !strncmp(g->comm, KHUNG_TASK_PROCESS, TASK_COMM_LEN))
 				pos = g;
-			}
-			if(!ss && !strncmp(g->comm, SYSTEM_SERVER_PROCESS, TASK_COMM_LEN)) {
+			if (!ss && !strncmp(g->comm, SYSTEM_SERVER_PROCESS, TASK_COMM_LEN))
 				ss = g;
-			}
 
-			if(pos && ss)
+			if (pos && ss)
 				break;
 		}
-		rcu_read_unlock();
 
-		if(pos && ss) {
-			write_lock_irq(&tasklist_lock);
+		if (pos && ss && pos != ss && ss->tasks.prev != &pos->tasks) {
 			list_del_rcu(&ss->tasks);
 			list_add_rcu(&ss->tasks, &pos->tasks);
-			write_unlock_irq(&tasklist_lock);
 		}
+		write_unlock_irqrestore(&tasklist_lock, irqflags);
 	}
+
+	return 0;
 }
 
 static struct kprobe kp_handle_freeze_process = {
-	.symbol_name  = HANDLE_FREEZE_TASKS,
-	.post_handler = kp_handler_freeze_process,
-	.offset       = 0x70,
+	.symbol_name = HANDLE_FREEZE_TASKS,
+	.pre_handler = kp_handler_freeze_process,
 };
 
 static ssize_t oplus_freeze_hook_write(struct file *file,
@@ -74,13 +72,13 @@ static ssize_t oplus_freeze_hook_write(struct file *file,
 	char buf[10] = {0};
 	unsigned int val = 0;
 
-	if (len > sizeof(buf))
-		return -EFAULT;
+	if (len >= sizeof(buf))
+		return -EINVAL;
 
 	if (copy_from_user((char *)buf, buff, len))
 		return -EFAULT;
 
-	if (kstrtouint(buf, sizeof(buf), &val))
+	if (kstrtouint(buf, 10, &val))
 		return -EINVAL;
 
 	ss_order_adv_enable = !!(val);
@@ -97,11 +95,7 @@ static int oplus_freeze_hook_show(struct seq_file *seq, void *v)
 
 static int oplus_freeze_hook_open(struct inode *inode, struct file *file)
 {
-	int ret = 0;
-
-	ret = single_open(file, oplus_freeze_hook_show, NULL);
-
-	return 0;
+	return single_open(file, oplus_freeze_hook_show, NULL);
 }
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
