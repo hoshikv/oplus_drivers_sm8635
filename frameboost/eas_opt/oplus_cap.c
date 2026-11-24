@@ -415,13 +415,9 @@ static ssize_t proc_util_thresh_percent_read(struct file *file, char __user *buf
 
 	buffer[0] = '\0';
 	for (i = 0; i < OPLUS_CLUSTERS; i++) {
-		len = snprintf(buffer, sizeof(buffer), "%s%d:util_thresh_percent=%d\n",
-					buffer, i, util_thresh_percent[i]);
-	}
-
-	if (len > LARGE_BUFFER_SIZE) {
-		len = LARGE_BUFFER_SIZE;
-		buffer[LARGE_BUFFER_SIZE-1] = '\0';
+		len += scnprintf(buffer + len, sizeof(buffer) - len,
+				"%d:util_thresh_percent=%d\n",
+				i, util_thresh_percent[i]);
 	}
 
 	return simple_read_from_buffer(buf, count, ppos, buffer, len);
@@ -640,17 +636,12 @@ static ssize_t proc_oplus_cap_read(struct file *file, char __user *buf,
 
 	buffer[0] = '\0';
 	for (i = 0; i < OPLUS_CLUSTERS; i++) {
-		len = snprintf(buffer, sizeof(buffer), "%scluster%d:%d\n",
-					buffer, i, oplus_cap_multiple[i]);
+		len += scnprintf(buffer + len, sizeof(buffer) - len,
+				"cluster%d:%d\n", i, oplus_cap_multiple[i]);
 	}
 	for (i = 0; i < OPLUS_CPUS; i++) {
-		len = snprintf(buffer, sizeof(buffer), "%scpu%d:%lu\n",
-					buffer, i, real_cpu_cap[i]);
-	}
-
-	if (len > LARGE_BUFFER_SIZE) {
-		len = LARGE_BUFFER_SIZE;
-		buffer[LARGE_BUFFER_SIZE-1] = '\0';
+		len += scnprintf(buffer + len, sizeof(buffer) - len,
+				"cpu%d:%lu\n", i, real_cpu_cap[i]);
 	}
 
 	return simple_read_from_buffer(buf, count, ppos, buffer, len);
