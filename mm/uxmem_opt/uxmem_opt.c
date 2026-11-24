@@ -113,12 +113,13 @@ static void page_pool_wakeup_process(struct page_pool *pool)
 
 void __maybe_unused set_ux_page_pool_fillthread_cpus(void)
 {
-	struct cpumask mask;
+	struct cpumask mask, max_cpus;
 	struct cpumask *cpumask = &mask;
 	pg_data_t *pgdat = NODE_DATA(0);
 	unsigned int cpu = 0, cpufreq_max_tmp = 0;
-	struct cpufreq_policy *policy_max = NULL;
+	bool found_max = false;
 
+	cpumask_clear(&max_cpus);
 	for_each_possible_cpu(cpu) {
 		struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 
@@ -127,13 +128,15 @@ void __maybe_unused set_ux_page_pool_fillthread_cpus(void)
 
 		if (policy->cpuinfo.max_freq >= cpufreq_max_tmp) {
 			cpufreq_max_tmp = policy->cpuinfo.max_freq;
-			policy_max = policy;
+			cpumask_copy(&max_cpus, policy->related_cpus);
+			found_max = true;
 		}
+		cpufreq_cpu_put(policy);
 	}
 
 	cpumask_copy(cpumask, cpumask_of_node(pgdat->node_id));
-	if (policy_max)
-		cpumask_andnot(cpumask, cpumask, policy_max->related_cpus);
+	if (found_max)
+		cpumask_andnot(cpumask, cpumask, &max_cpus);
 
 	if (!cpumask_empty(cpumask))
 		set_cpus_allowed_ptr(current, cpumask);
@@ -156,9 +159,9 @@ static int ux_page_pool_fillthread(void *p)
 
 	while (!kthread_should_stop()) {
 		ret = wait_event_interruptible(kworkthread_waitq,
-						       (kworkthread_wait_flag == 1));
-		if (ret < 0)
-			continue;
+					       (kworkthread_wait_flag == 1) || kthread_should_stop());
+		if (ret < 0 || kthread_should_stop())
+			break;
 
 		kworkthread_wait_flag = 0;
 

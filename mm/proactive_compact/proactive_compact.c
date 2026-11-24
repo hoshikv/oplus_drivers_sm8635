@@ -180,11 +180,15 @@ static ssize_t fragmentation_index_write(struct file *file,
 	}
 
 	if (!debug_get_val(str, "compaction_hpage_order=", &val)) {
+		if (val == 0 || val >= MAX_ORDER)
+			return -EINVAL;
 		g_compaction_hpage_order = val;
 		return len;
 	}
 
 	if (!debug_get_val(str, "compaction_proactiveness=", &val)) {
+		if (val > 100)
+			return -EINVAL;
 		g_compaction_proactiveness = val;
 		return len;
 	}

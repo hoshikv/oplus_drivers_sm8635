@@ -88,7 +88,8 @@ bool wakeup_shrink_slabd(gfp_t gfp_mask, int nid,
 	asp.shrink_slabd_memcg = memcg;
 	asp.priority = priority;
 	asp.shrink_slabd_runnable = 1;
-	css_get(&memcg->css);
+	if (memcg)
+		css_get(&memcg->css);
 	mutex_unlock(&async_shrink_slab_mutex);
 
 	wake_up_interruptible(&shrink_slabd_wait);
@@ -98,11 +99,11 @@ bool wakeup_shrink_slabd(gfp_t gfp_mask, int nid,
 
 void set_async_slabd_cpus(void)
 {
-	struct cpumask mask;
+	struct cpumask mask, max_cpus;
 	struct cpumask *cpumask = &mask;
 	pg_data_t *pgdat = NODE_DATA(0);
 	unsigned int cpu = 0, cpufreq_max_tmp = 0;
-	struct cpufreq_policy *policy_max;
+	bool found_max = false;
 	static bool set_slabd_cpus_success = false;
 
 	if (unlikely(!async_shrink_slabd_setup))
@@ -110,6 +111,8 @@ void set_async_slabd_cpus(void)
 
 	if (likely(set_slabd_cpus_success))
 		return;
+
+	cpumask_clear(&max_cpus);
 	for_each_possible_cpu(cpu) {
 		struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 
@@ -118,12 +121,17 @@ void set_async_slabd_cpus(void)
 
 		if (policy->cpuinfo.max_freq >= cpufreq_max_tmp) {
 			cpufreq_max_tmp = policy->cpuinfo.max_freq;
-			policy_max = policy;
+			cpumask_copy(&max_cpus, policy->related_cpus);
+			found_max = true;
 		}
+		cpufreq_cpu_put(policy);
 	}
 
+	if (!found_max)
+		return;
+
 	cpumask_copy(cpumask, cpumask_of_node(pgdat->node_id));
-	cpumask_andnot(cpumask, cpumask, policy_max->related_cpus);
+	cpumask_andnot(cpumask, cpumask, &max_cpus);
 
 	if (!cpumask_empty(cpumask)) {
 		set_cpus_allowed_ptr(shrink_slabd_tsk, cpumask);
@@ -159,7 +167,10 @@ static int __nocfi kshrink_slabd_func(void *p)
 	asp.priority = 0;
 
 	while (!kthread_should_stop()) {
-		wait_event_freezable(shrink_slabd_wait, asp.shrink_slabd_runnable == 1);
+		wait_event_freezable(shrink_slabd_wait,
+				     asp.shrink_slabd_runnable == 1 || kthread_should_stop());
+		if (kthread_should_stop())
+			break;
 
 		set_async_slabd_cpus();
 
@@ -173,7 +184,8 @@ static int __nocfi kshrink_slabd_func(void *p)
 		mutex_unlock(&async_shrink_slab_mutex);
 
 		shrink_slab_dup(gfp_mask, nid, memcg, priority);
-		css_put(&memcg->css);
+		if (memcg)
+			css_put(&memcg->css);
 		set_task_reclaim_state(current, NULL);
 	}
 	current->flags &= ~(PF_MEMALLOC | PF_KSWAPD);
