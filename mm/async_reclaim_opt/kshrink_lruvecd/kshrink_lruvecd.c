@@ -124,11 +124,11 @@ static void handle_failed_page_trylock(void *data, struct list_head *page_list)
 
 void set_shrink_lruvecd_cpus(void)
 {
-	struct cpumask mask;
+	struct cpumask mask, max_cpus;
 	struct cpumask *cpumask = &mask;
 	pg_data_t *pgdat = NODE_DATA(0);
 	unsigned int cpu = 0, cpufreq_max_tmp = 0;
-	struct cpufreq_policy *policy_max;
+	bool found_max = false;
 	static bool set_slabd_cpus_success = false;
 
 	if (unlikely(!async_shrink_lruvec_setup))
@@ -137,6 +137,7 @@ void set_shrink_lruvecd_cpus(void)
 	if (likely(set_slabd_cpus_success))
 		return;
 
+	cpumask_clear(&max_cpus);
 	for_each_possible_cpu(cpu) {
 		struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 
@@ -145,12 +146,17 @@ void set_shrink_lruvecd_cpus(void)
 
 		if (policy->cpuinfo.max_freq >= cpufreq_max_tmp) {
 			cpufreq_max_tmp = policy->cpuinfo.max_freq;
-			policy_max = policy;
+			cpumask_copy(&max_cpus, policy->related_cpus);
+			found_max = true;
 		}
+		cpufreq_cpu_put(policy);
 	}
 
+	if (!found_max)
+		return;
+
 	cpumask_copy(cpumask, cpumask_of_node(pgdat->node_id));
-	cpumask_andnot(cpumask, cpumask, policy_max->related_cpus);
+	cpumask_andnot(cpumask, cpumask, &max_cpus);
 
 	if (!cpumask_empty(cpumask)) {
 		set_cpus_allowed_ptr(shrink_lruvec_tsk, cpumask);
