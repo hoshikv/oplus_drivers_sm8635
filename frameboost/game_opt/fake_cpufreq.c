@@ -16,6 +16,8 @@ static void show_cpuinfo_max_freq_hook(void *data,
 	 * return cpu7 cpuinfo_max_freq with cpu4 cpuinfo_max_freq
 	 */
 	bpolicy = cpufreq_cpu_get(4);
+	if (!bpolicy)
+		return;
 	*max_freq = bpolicy->cpuinfo.max_freq;
 	cpufreq_cpu_put(bpolicy);
 }
