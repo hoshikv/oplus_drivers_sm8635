@@ -62,7 +62,8 @@ static int input_boost_ctrl_handler(struct ctl_table *table, int write, void __u
 		goto out;
 
 	disable_input_boost_timer();
-	enable_input_boost_timer();
+	if (sysctl_input_boost_enabled)
+		enable_input_boost_timer();
 out:
 	return result;
 }

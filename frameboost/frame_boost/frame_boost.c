@@ -66,7 +66,7 @@ void fbg_set_stune_boost(int value, int grp_id, unsigned int type)
 {
 	struct frame_group *grp = NULL;
 
-	if (!vaild_stune_boost_type(type))
+	if (!vaild_stune_boost_type(type) || grp_id <= 0 || grp_id >= MAX_NUM_FBG_ID)
 		return;
 	grp = frame_boost_groups[grp_id];
 	if (!grp)
@@ -79,7 +79,7 @@ int fbg_get_stune_boost(int grp_id, unsigned int type)
 {
 	struct frame_group *grp = NULL;
 
-	if (!vaild_stune_boost_type(type))
+	if (!vaild_stune_boost_type(type) || grp_id <= 0 || grp_id >= MAX_NUM_FBG_ID)
 		return 0;
 	grp = frame_boost_groups[grp_id];
 	if (!grp)
