@@ -191,9 +191,10 @@ static int self_activate_store(const char *buf, const struct kernel_param *kp)
 
 	self_activate = !!val;
 
-	if (self_activate)
-		wake_up_process(cb_task);
-	else {
+	if (self_activate) {
+		if (cb_task)
+			wake_up_process(cb_task);
+	} else {
 		for (i = 0; i < NR_CLUS_MAX; ++i)
 			cb_reset_qos(i);
 	}
@@ -244,7 +245,7 @@ static int enable_store(const char *buf, const struct kernel_param *kp)
 		cb->cur_level = cb->max_level ? cb->max_level : NR_FREQ - 1;
 	}
 
-	if (self_activate)
+	if (self_activate && cb_task)
 		wake_up_process(cb_task);
 
 	pr_info("cb %s\n", enable ? "enabled" : "disabled");
@@ -267,13 +268,14 @@ module_param_named(decay, decay, uint, 0664);
 static DEFINE_PER_CPU(struct cpufreq_bouncing*, cbs);
 
 static int cb_pol_idx, cb_switch;
+static int cb_nr_clusters = NR_CLUS_MAX;
 
 static inline struct cpufreq_bouncing *cb_get(int cpu)
 {
 	if (cpu < 0 || cpu >= NR_CORE_MAX)
 		return NULL;
 
-	if (cb_switch == NR_CLUS_MAX) {
+	if (cb_switch >= cb_nr_clusters) {
 		struct cpufreq_bouncing *cb = per_cpu(cbs, cpu);
 
 		if (unlikely(!cb))
@@ -855,19 +857,41 @@ void cb_stuff_init(struct cpufreq_policy *policy)
 
 	set_bit(first_cpu, &is_init);
 
-	/* here now, the three policy all are init sucessful. */
-	if ((cb_idx == NR_CLUS_MAX-1) && (cb_switch == NR_CLUS_MAX)) {
+	/* Start cb_task once all detected CPU clusters are initialized. */
+	if (!cb_task && cb_switch >= cb_nr_clusters) {
 		cb_task = kthread_run(cb_main, NULL, "cb_task");
-		pr_err("cb stuff init sucessful\n");
+		if (IS_ERR(cb_task)) {
+			pr_err("cb_task creation failed: %ld\n", PTR_ERR(cb_task));
+			cb_task = NULL;
+		} else {
+			pr_info("cb stuff init successful (%d clusters)\n", cb_nr_clusters);
+		}
 	}
 }
 EXPORT_SYMBOL(cb_stuff_init);
 
 static int __init cb_init(void)
 {
-	cb_switch = 0;
+	int cpu, max_cid = -1;
+	struct cpufreq_policy *pol;
 
-	pr_info("cb init\n");
+	cb_switch = 0;
+	for_each_possible_cpu(cpu) {
+		int cid = topology_cluster_id(cpu);
+		if (cid > max_cid && cid < NR_CLUS_MAX)
+			max_cid = cid;
+	}
+	cb_nr_clusters = (max_cid >= 0) ? (max_cid + 1) : 3;
+
+	for_each_possible_cpu(cpu) {
+		pol = cpufreq_cpu_get(cpu);
+		if (pol) {
+			cb_stuff_init(pol);
+			cpufreq_cpu_put(pol);
+		}
+	}
+
+	pr_info("cb init (clusters=%d, initialized=%d)\n", cb_nr_clusters, cb_switch);
 
 	return 0;
 }

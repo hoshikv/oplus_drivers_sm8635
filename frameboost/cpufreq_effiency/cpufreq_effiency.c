@@ -154,6 +154,9 @@ static bool was_diff_powerdomain(struct cpufreq_policy *policy, unsigned int fre
 		return false;
 	}
 
+	if (platform_soc_id == SM8635_SOC_ID)
+		return true;
+
 	cluster_pd = get_cluster_pd(policy);
 	if(cluster_pd != NULL) {
 		/* pr_info("freq: %d cluster_pd[index]: %d cluster_pd[index_pre]: %d \n", freq, cluster_pd[index], cluster_pd[index_pre]); */
@@ -296,6 +299,8 @@ static int cpufreq_pd_init(void)
 		platform_soc_id = SM7450_SOC_ID;
 	} else if (strstr(prop_str, PLATFORM_SM8550)) {
 		platform_soc_id = SM8550_SOC_ID;
+	} else if (strstr(prop_str, PLATFORM_SM8635)) {
+		platform_soc_id = SM8635_SOC_ID;
 	} else {
 		platform_soc_id = ABSENT_SOC_ID;
 	}

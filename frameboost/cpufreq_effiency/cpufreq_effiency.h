@@ -43,10 +43,12 @@
 #define SM8450_SOC_ID    457
 #define SM7450_SOC_ID    506
 #define SM8550_SOC_ID    519
+#define SM8635_SOC_ID    614
 #define PLATFORM_SM8350  "lahaina"
 #define PLATFORM_SM8450  "waipio"
 #define PLATFORM_SM7450  "diwali"
 #define PLATFORM_SM8550  "kalama"
+#define PLATFORM_SM8635  "cliffs"
 
 /* define the cluster information */
 #define MAX_CLUSTER      3
