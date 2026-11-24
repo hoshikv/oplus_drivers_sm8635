@@ -238,10 +238,13 @@ void uag_update_util(void *data, unsigned long util, unsigned long freq,
 	first_cpu = cpumask_first(policy->related_cpus);
 	cluster_id = topology_cluster_id(first_cpu);
 
-	if (cluster_id >= MAX_CLUSTERS)
+	if (cluster_id < 0 || cluster_id >= MAX_CLUSTERS)
 		return;
 
 	if (init_flag[cluster_id] == 0)
+		return;
+
+	if (policy->governor != &cpufreq_uag_gov)
 		return;
 
 	sg_policy = policy->governor_data;

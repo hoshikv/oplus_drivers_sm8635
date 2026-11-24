@@ -111,7 +111,8 @@ struct uag_gov_policy {
 #endif
 };
 
-static int init_flag[MAX_CLUSTERS];
+extern int init_flag[MAX_CLUSTERS];
+extern struct cpufreq_governor cpufreq_uag_gov;
 
 #ifdef CONFIG_ARCH_MEDIATEK
 extern u64 curr_frame_start;

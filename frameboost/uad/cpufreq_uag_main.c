@@ -52,6 +52,7 @@
  * monotonic voltage proxy so the cobuck heuristic stays well-defined.
  */
 bool uaggov_disabled;
+int init_flag[MAX_CLUSTERS];
 
 unsigned int freq_to_voltage(int cid, unsigned int freq)
 {
@@ -1152,7 +1153,7 @@ static void uag_gov_update_single(struct waltgov_callback *cb, u64 time,
 	struct cpufreq_policy *policy = sg_policy->policy;
 	int util_thresh = 0;
 	unsigned int avg_nr_running = 1;
-	int cluster_id = topology_physical_package_id(cpumask_first(policy->cpus));
+	int cluster_id = topology_cluster_id(cpumask_first(policy->cpus));
 	unsigned long util_orig;
 #endif
 #if IS_ENABLED(CONFIG_OPLUS_CPUFREQ_IOWAIT_PROTECT)
@@ -1241,7 +1242,8 @@ static void uag_gov_update_single(struct waltgov_callback *cb, u64 time,
 #endif
 #endif
 #if IS_ENABLED(CONFIG_OPLUS_FEATURE_VT_CAP)
-	if (eas_opt_enable && (util_thresh_percent[cluster_id] != 100)) {
+	if (eas_opt_enable && cluster_id >= 0 && cluster_id < OPLUS_CLUSTERS &&
+	    (util_thresh_percent[cluster_id] != 100)) {
 		util_thresh = max * util_thresh_cvt[cluster_id] >> SCHED_CAPACITY_SHIFT;
 		avg_nr_running = rq->nr_running;
 		util_orig = util;
@@ -1293,7 +1295,7 @@ static unsigned int uag_gov_next_freq_shared(struct uag_gov_cpu *sg_cpu, u64 tim
 	int util_thresh = 0;
 	unsigned int avg_nr_running = 1;
 	unsigned int count_cpu = 0;
-	int cluster_id = topology_physical_package_id(cpumask_first(policy->cpus));
+	int cluster_id = topology_cluster_id(cpumask_first(policy->cpus));
 	unsigned long util_orig;
 #endif
 #if IS_ENABLED(CONFIG_OPLUS_FEATURE_FRAME_BOOST)
@@ -1364,7 +1366,8 @@ static unsigned int uag_gov_next_freq_shared(struct uag_gov_cpu *sg_cpu, u64 tim
 #endif
 #endif
 #if IS_ENABLED(CONFIG_OPLUS_FEATURE_VT_CAP)
-	if (eas_opt_enable && (util_thresh_percent[cluster_id] != 100) && count_cpu) {
+	if (eas_opt_enable && cluster_id >= 0 && cluster_id < OPLUS_CLUSTERS &&
+	    (util_thresh_percent[cluster_id] != 100) && count_cpu) {
 		util_thresh = max * util_thresh_cvt[cluster_id] >> SCHED_CAPACITY_SHIFT;
 		avg_nr_running = mult_frac(avg_nr_running, 1, count_cpu);
 		util_orig = util;

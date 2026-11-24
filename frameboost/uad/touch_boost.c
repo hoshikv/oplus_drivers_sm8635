@@ -225,12 +225,13 @@ static void update_policy_online(void)
 		if (!policy) {
 			pr_err("%s: cpufreq policy not found for cpu%d\n",
 							__func__, i);
-			return;
+			continue;
 		}
 
 		cpumask_andnot(&online_cpus, &online_cpus,
 						policy->related_cpus);
 		boost_adjust_notify(policy);
+		cpufreq_cpu_put(policy);
 	}
 	cpus_read_unlock();
 }
@@ -263,7 +264,7 @@ static void do_input_boost(struct work_struct *work)
 
 	/* Set the input_boost_min for all CPUs in the system */
 	pr_debug("Setting input boost min for all CPUs\n");
-	for (i = 0; i < 8; i++) {
+	for_each_possible_cpu(i) {
 		struct cpufreq_policy *policy;
 		struct oplus_touch_boost *otb;
 
@@ -371,13 +372,28 @@ static void inputboost_input_disconnect(struct input_handle *handle)
 	kfree(handle);
 }
 
-/* Only match touchpanel */
+/* Match OPlus and Xiaomi POCO F6 (peridot) touchscreens */
 static bool inputboost_input_match(struct input_handler *handler, struct input_dev *dev)
 {
-	const char *dev_match_name = "touchpanel";
+	static const char * const touch_names[] = {
+		"touchpanel",
+		"fts_ts",
+		"goodix_ts",
+		"xiaomi_touch",
+		"NVTCapacitiveTouchScreen",
+		"synaptics",
+		"raydium_ts",
+		"Atmel maXTouch",
+	};
+	int i;
 
-	if (strncmp(dev_match_name, dev->name, strlen(dev_match_name)) == 0)
-		return true;
+	if (!dev || !dev->name)
+		return false;
+
+	for (i = 0; i < ARRAY_SIZE(touch_names); i++) {
+		if (strncmp(touch_names[i], dev->name, strlen(touch_names[i])) == 0)
+			return true;
+	}
 
 	return false;
 }
@@ -483,8 +499,10 @@ int touch_boost_init(void)
 
 		first_cpu = cpumask_first(policy->related_cpus);
 		cpu_dev = get_cpu_device(first_cpu);
-		if (!cpu_dev)
+		if (!cpu_dev) {
+			cpufreq_cpu_put(policy);
 			return -ENODEV;
+		}
 
 		cluster_init(first_cpu, cpu_dev);
 
@@ -495,6 +513,7 @@ int touch_boost_init(void)
 		ret = freq_qos_add_request(&policy->constraints, req,
 						FREQ_QOS_MIN, policy->min);
 #endif
+		cpufreq_cpu_put(policy);
 		if (ret < 0) {
 			pr_err("%s: Failed to add freq constraint (%d)\n",
 							__func__, ret);
