@@ -588,7 +588,7 @@ retry:
 		spare_cap = oplus_capacity_spare_of(cpu, task);
 		/* Avoid task always been choosed to prime+ cpu who have highest capacity on low-end platform */
 		if (global_lowend_plat_opt && global_less_prime_cpu_arch) {
-			if ((topology_physical_package_id(cpu) == start_cls) && (spare_cap > subopt_max_spare_cap)) {
+			if ((get_topology_cluster_id(cpu) == start_cls) && (spare_cap > subopt_max_spare_cap)) {
 				subopt_max_spare_cap = spare_cap;
 				max_subopt_cpu = cpu;
 			}
@@ -1274,6 +1274,10 @@ void android_rvh_dequeue_entity_handler(void *unused, struct cfs_rq *cfs, struct
 void android_rvh_check_preempt_wakeup_handler(void *unused, struct rq *rq, struct task_struct *p, bool *preempt, bool *nopreempt,
 	int wake_flags, struct sched_entity *se, struct sched_entity *pse, int next_buddy_marked, unsigned int granularity)
 {
+	/* Respect earlier RVH decisions (e.g. WALT MVP preemption). */
+	if (*preempt || *nopreempt)
+		return;
+
 	oplus_check_preempt_wakeup(rq, p, preempt, nopreempt);
 }
 
@@ -1287,6 +1291,10 @@ void android_rvh_post_init_entity_util_avg_handler(void *unused, struct sched_en
 void android_rvh_replace_next_task_fair_handler(void *unused,
 		struct rq *rq, struct task_struct **p, struct sched_entity **se, bool *repick, bool simple, struct task_struct *prev)
 {
+	/* Respect earlier RVH pick (e.g. WALT MVP) and avoid double set_next_entity(). */
+	if (*repick)
+		return;
+
 	oplus_replace_next_task_fair(rq, p, se, repick, simple);
 #ifdef CONFIG_LOCKING_PROTECT
 	if (*repick != true)

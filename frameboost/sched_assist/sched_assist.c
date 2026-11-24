@@ -99,81 +99,9 @@ void register_wake_up_new_task_ext_handler(wake_up_new_task_handler_t ext_handle
 }
 EXPORT_SYMBOL(register_wake_up_new_task_ext_handler);
 
-extern struct tracepoint __tracepoint_sched_stat_runtime;
-extern struct tracepoint __tracepoint_android_rvh_place_entity;
-extern struct tracepoint __tracepoint_android_rvh_enqueue_entity;
-extern struct tracepoint __tracepoint_android_rvh_wake_up_new_task;
-
-static void sa_dbg_tp(const char *name, struct tracepoint *tp)
-{
-	struct tracepoint_func *f = rcu_dereference_raw(tp->funcs);
-
-	pr_info("oplus_sa: tp %-35s @%px funcs=%px\n", name, tp, f);
-	if (f)
-		pr_info("oplus_sa:   [0] func=%px data=%px | [1] func=%px data=%px\n",
-			f[0].func, f[0].data, f[1].func, f[1].data);
-}
-
-static int sa_init_phase;
-static u64 sa_init_wdt_t0;
-static struct task_struct *sa_wdt_thread;
-static struct task_struct *sa_init_task;
-
-static int sa_wdt(void *arg)
-{
-	int last_phase = -1;
-	u64 last_ts = ktime_get_ns();
-
-	while (!kthread_should_stop() && sa_init_phase < 99) {
-		msleep(2000);
-		if (!kthread_should_stop() && sa_init_phase != last_phase) {
-			last_phase = sa_init_phase;
-			last_ts = ktime_get_ns();
-			continue;
-		}
-		if (kthread_should_stop() || sa_init_phase >= 99)
-			break;
-		if ((ktime_get_ns() - last_ts) > 8ULL * NSEC_PER_SEC) {
-			pr_emerg("oplus_sa: sa_wdt: init stalled at phase %d "
-				 "(%llu ms into init), dumping insmod task\n",
-				 sa_init_phase,
-				 (unsigned long long)((ktime_get_ns() - sa_init_wdt_t0) / NSEC_PER_MSEC));
-			if (sa_init_task)
-				dump_backtrace(NULL, sa_init_task, KERN_EMERG);
-			panic("oplus_sa: sched_assist init stall (phase %d)",
-			      sa_init_phase);
-		}
-	}
-	return 0;
-}
-
-static void sa_wdt_start(void)
-{
-	sa_init_phase = 0;
-	sa_init_wdt_t0 = ktime_get_ns();
-	sa_init_task = current;
-	sa_wdt_thread = kthread_run(sa_wdt, NULL, "sa_wdt");
-}
-
-static void sa_wdt_phase(int phase)
-{
-	sa_init_phase = phase;
-}
-
-static void sa_wdt_finish(void)
-{
-	sa_init_phase = 99;
-	if (sa_wdt_thread)
-		kthread_stop(sa_wdt_thread);
-}
-
 static int register_scheduler_vendor_hooks(void)
 {
 	int ret;
-
-	sa_dbg_tp("place_entity", &__tracepoint_android_rvh_place_entity);
-	sa_dbg_tp("enqueue_entity", &__tracepoint_android_rvh_enqueue_entity);
-	sa_dbg_tp("sched_stat_runtime(pre)", &__tracepoint_sched_stat_runtime);
 
 	/* register vender hook in kernel/sched/fair.c */
 	REGISTER_TRACE_RVH(android_rvh_place_entity, android_rvh_place_entity_handler);
@@ -188,11 +116,15 @@ static int register_scheduler_vendor_hooks(void)
 	REGISTER_TRACE_RVH(android_rvh_enqueue_entity, android_rvh_enqueue_entity_handler);
 	REGISTER_TRACE_RVH(android_rvh_dequeue_entity, android_rvh_dequeue_entity_handler);
 
-#ifndef CONFIG_OPLUS_SYSTEM_KERNEL_QCOM
+	/*
+	 * Register UX wakeup preemption and fair next-task pick hooks.
+	 * On Xiaomi SM8635 GKI, WALT registers its own MVP handlers on these
+	 * RVHs without calling OPlus helpers directly; our handlers check
+	 * *preempt/*nopreempt and *repick first so WALT MVP decisions win.
+	 */
 	REGISTER_TRACE_RVH(android_rvh_check_preempt_wakeup, android_rvh_check_preempt_wakeup_handler);
 #ifndef CONFIG_MTK_SCHED_VIP_TASK
 	REGISTER_TRACE_RVH(android_rvh_replace_next_task_fair, android_rvh_replace_next_task_fair_handler);
-#endif
 #endif
 
 	/* register vender hook in kernel/sched/topology.c */
@@ -230,9 +162,6 @@ static int register_scheduler_vendor_hooks(void)
 
 	REGISTER_TRACE_VH(sched_stat_runtime, android_vh_sched_stat_runtime_handler);
 
-	sa_dbg_tp("sched_stat_runtime(post)", &__tracepoint_sched_stat_runtime);
-
-	sa_dbg_tp("wake_up_new_task", &__tracepoint_android_rvh_wake_up_new_task);
 	REGISTER_TRACE_VH(android_rvh_wake_up_new_task, android_rvh_wake_up_new_task_handler);
 
 #ifdef CONFIG_BLOCKIO_UX_OPT
@@ -295,39 +224,25 @@ static int __init oplus_sched_assist_init(void)
 {
 	int ret;
 
-	sa_wdt_start();
-
 	ret = sa_oemdata_init();
-	if (ret != 0) {
-		sa_wdt_finish();
+	if (ret != 0)
 		return ret;
-	}
-	sa_wdt_phase(1);
 
 	sched_assist_init_oplus_rq();
-	sa_wdt_phase(2);
 	update_ux_sched_cputopo();
-	sa_wdt_phase(3);
 #ifdef CONFIG_OPLUS_FEATURE_TICK_GRAN
 	resched_timer_init();
 #endif
-	sa_wdt_phase(4);
 
 	ret = register_scheduler_vendor_hooks();
-	if (ret != 0) {
-		sa_wdt_finish();
+	if (ret != 0)
 		return ret;
-	}
-	sa_wdt_phase(5);
 
 	ret = oplus_sched_assist_proc_init();
-	if (ret != 0) {
-		sa_wdt_finish();
+	if (ret != 0)
 		return ret;
-	}
-	sa_wdt_phase(6);
+
 	detect_symbol();
-	sa_wdt_phase(7);
 	if (_profile_event_register)
 		/* register a notifier to monitor task exit */
 		(*_profile_event_register)(PROFILE_TASK_EXIT, &process_exit_notifier_block);
@@ -337,7 +252,6 @@ static int __init oplus_sched_assist_init(void)
 #endif
 
 	ux_debug("sched assist init succeed!\n");
-	sa_wdt_finish();
 	return 0;
 }
 
