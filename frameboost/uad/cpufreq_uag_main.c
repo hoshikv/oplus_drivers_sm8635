@@ -232,13 +232,62 @@ static bool uag_gov_update_next_freq(struct uag_gov_policy *sg_policy, u64 time,
 }
 
 #ifdef CONFIG_OPLUS_SYSTEM_KERNEL_QCOM
+typedef unsigned long (*uag_kallsyms_lookup_t)(const char *name);
+typedef unsigned long (*uag_cpu_util_freq_walt_t)(int cpu,
+		struct walt_cpu_load *walt_load, unsigned int *reason);
+
+static unsigned int *uag_sched_ravg_window_ptr;
+static unsigned int (*uag_fmax_cap_ptr)[MAX_CLUSTERS];
+static uag_cpu_util_freq_walt_t uag_cpu_util_freq_walt_fn;
+
+static inline unsigned int uag_get_ravg_window(void)
+{
+	return READ_ONCE(*uag_sched_ravg_window_ptr);
+}
+
+static noinline unsigned long __nocfi uag_call_cpu_util_freq_walt(int cpu,
+		struct walt_cpu_load *walt_load, unsigned int *reason)
+{
+	return uag_cpu_util_freq_walt_fn(cpu, walt_load, reason);
+}
+
+static int __nocfi uag_resolve_walt_symbols(void)
+{
+	struct kprobe kp = {
+		.symbol_name = "kallsyms_lookup_name",
+	};
+	uag_kallsyms_lookup_t lookup;
+	int ret;
+
+	ret = register_kprobe(&kp);
+	if (ret < 0) {
+		pr_err("failed to resolve kallsyms_lookup_name (%d)\n", ret);
+		return ret;
+	}
+	lookup = (uag_kallsyms_lookup_t)kp.addr;
+	unregister_kprobe(&kp);
+
+	uag_sched_ravg_window_ptr = (unsigned int *)lookup("sched_ravg_window");
+	uag_fmax_cap_ptr = (unsigned int (*)[MAX_CLUSTERS])lookup("fmax_cap");
+	uag_cpu_util_freq_walt_fn = (uag_cpu_util_freq_walt_t)lookup("cpu_util_freq_walt");
+
+	if (!uag_sched_ravg_window_ptr || !uag_fmax_cap_ptr || !uag_cpu_util_freq_walt_fn) {
+		pr_err("failed to resolve WALT symbols (ravg=%px fmax=%px util=%px)\n",
+			uag_sched_ravg_window_ptr, uag_fmax_cap_ptr, uag_cpu_util_freq_walt_fn);
+		return -ENOENT;
+	}
+
+	pr_info("resolved WALT symbols (ravg_window=%u)\n", *uag_sched_ravg_window_ptr);
+	return 0;
+}
+
 #define KHZ 1000
 static void uag_track_cycles(struct uag_gov_policy *sg_policy,
 				unsigned int prev_freq,
 				u64 upto)
 {
 	u64 delta_ns, cycles;
-	u64 next_ws = sg_policy->last_ws + sched_ravg_window;
+	u64 next_ws = sg_policy->last_ws + uag_get_ravg_window();
 
 	upto = min(upto, next_ws);
 	/* Track cycles in current window */
@@ -559,14 +608,14 @@ static unsigned int get_next_freq(struct uag_gov_policy *sg_policy,
 #ifdef CONFIG_OPLUS_SYSTEM_KERNEL_QCOM
 		struct walt_sched_cluster *cluster;
 		cluster = cpu_cluster(policy->cpu);
-		if (next_freq > fmax_cap[SMART_FMAX_CAP][cluster->id]) {
-			next_freq = fmax_cap[SMART_FMAX_CAP][cluster->id];
+		if (next_freq > uag_fmax_cap_ptr[SMART_FMAX_CAP][cluster->id]) {
+			next_freq = uag_fmax_cap_ptr[SMART_FMAX_CAP][cluster->id];
 		}
-		if (next_freq > fmax_cap[HIGH_PERF_CAP][cluster->id]) {
-			next_freq = fmax_cap[HIGH_PERF_CAP][cluster->id];
+		if (next_freq > uag_fmax_cap_ptr[HIGH_PERF_CAP][cluster->id]) {
+			next_freq = uag_fmax_cap_ptr[HIGH_PERF_CAP][cluster->id];
 		}
-		if (next_freq > fmax_cap[PARTIAL_HALT_CAP][cluster->id]) {
-			next_freq = fmax_cap[PARTIAL_HALT_CAP][cluster->id];
+		if (next_freq > uag_fmax_cap_ptr[PARTIAL_HALT_CAP][cluster->id]) {
+			next_freq = uag_fmax_cap_ptr[PARTIAL_HALT_CAP][cluster->id];
 		}
 #endif
 		freq = next_freq;
@@ -641,7 +690,7 @@ static unsigned long uag_gov_get_util(struct uag_gov_cpu *sg_cpu)
 
 	sg_cpu->max = max;
 	sg_cpu->reasons = 0;
-	util = cpu_util_freq_walt(sg_cpu->cpu, &sg_cpu->walt_load, &sg_cpu->reasons);
+	util = uag_call_cpu_util_freq_walt(sg_cpu->cpu, &sg_cpu->walt_load, &sg_cpu->reasons);
 	sg_cpu->bw_dl = cpu_bw_dl(rq);
 
 #ifdef CONFIG_OPLUS_UAG_AMU_AWARE
@@ -819,14 +868,14 @@ static void uag_calc_avg_cap(struct uag_gov_policy *sg_policy, u64 curr_ws,
 		return;
 
 	/* If we skipped some windows */
-	if (curr_ws > (last_ws + sched_ravg_window)) {
+	if (curr_ws > (last_ws + uag_get_ravg_window())) {
 		avg_freq = prev_freq;
 		/* Reset tracking history */
 		sg_policy->last_cyc_update_time = curr_ws;
 	} else {
 		uag_track_cycles(sg_policy, prev_freq, curr_ws);
 		avg_freq = sg_policy->curr_cycles;
-		avg_freq /= sched_ravg_window / (NSEC_PER_SEC / KHZ);
+		avg_freq /= uag_get_ravg_window() / (NSEC_PER_SEC / KHZ);
 	}
 	sg_policy->avg_cap = freq2util(sg_policy, avg_freq);
 	sg_policy->curr_cycles = 0;
@@ -2858,6 +2907,12 @@ static void create_is_game_scene_proc_file(struct proc_dir_entry *dir)
 static int __init cpufreq_uag_init(void)
 {
 	int ret = 0;
+
+#ifdef CONFIG_OPLUS_SYSTEM_KERNEL_QCOM
+	ret = uag_resolve_walt_symbols();
+	if (ret)
+		return ret;
+#endif
 
 	ret = cpufreq_register_governor(&cpufreq_uag_gov);
 	if (ret)
