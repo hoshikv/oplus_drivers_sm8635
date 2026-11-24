@@ -759,16 +759,15 @@ static ssize_t proc_group_adjust_read(struct file *file, char __user *buf,
 
 	buffer[0] = '\0';
 	for (i = 0; i < AD_MAX_GROUP; i++) {
-		len = snprintf(buffer, sizeof(buffer), "%sgroup_adjust_%s:%lu %d\n",
-					buffer, groups[i], group_adjust.group_param[i].vtime_compensate, group_adjust.group_param[i].util_compensate);
+		len += scnprintf(buffer + len, sizeof(buffer) - len,
+				"group_adjust_%s:%lu %d\n",
+				groups[i], group_adjust.group_param[i].vtime_compensate,
+				group_adjust.group_param[i].util_compensate);
 	}
-	len = snprintf(buffer, sizeof(buffer), "%stask_util_thresh:%d\n", buffer, group_adjust.task_compensate);
-	len = snprintf(buffer, sizeof(buffer), "%sadjust_std_vtime_slice:%llu\n", buffer, group_adjust.adjust_std_vtime_slice);
-
-	if (len > LARGE_BUFFER_SIZE) {
-		len = LARGE_BUFFER_SIZE;
-		buffer[LARGE_BUFFER_SIZE-1] = '\0';
-	}
+	len += scnprintf(buffer + len, sizeof(buffer) - len,
+			"task_util_thresh:%d\n", group_adjust.task_compensate);
+	len += scnprintf(buffer + len, sizeof(buffer) - len,
+			"adjust_std_vtime_slice:%llu\n", group_adjust.adjust_std_vtime_slice);
 
 	return simple_read_from_buffer(buf, count, ppos, buffer, len);
 }
@@ -813,10 +812,11 @@ void android_rvh_place_entity_handler(void *unused, struct cfs_rq *cfs_rq, struc
 #if IS_ENABLED(CONFIG_OPLUS_FEATURE_VT_CAP)
 	struct task_struct *se_task = NULL;
 	int cpu = cpu_of(rq_of(cfs_rq));
-	unsigned int cluster_id = topology_physical_package_id(cpu);
+	int cluster_id = topology_cluster_id(cpu);
 	u64 adjust_time = 0;
 
-	if (!sa_adjust_group_enable || oplus_cap_multiple[cluster_id] <= 100)
+	if (!sa_adjust_group_enable || cluster_id < 0 || cluster_id >= OPLUS_CLUSTERS ||
+	    oplus_cap_multiple[cluster_id] <= 100)
 		return;
 
 	if (!oplus_entity_is_task(se) || initial)
