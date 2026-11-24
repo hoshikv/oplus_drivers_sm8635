@@ -170,7 +170,8 @@ static int kcompressd(void *para)
 			}
 		}
 
-		usleep_range(1000, 2000);
+		if (!kthread_should_stop())
+			usleep_range(1000, 2000);
 
 	}
 
@@ -188,6 +189,8 @@ static int init_write_queue(void)
 		if (kfifo_alloc(&kcompress[i].write_fifo,
 					queue_len, GFP_KERNEL)) {
 			pr_err("Failed to alloc kfifo %d\n", i);
+			while (--i >= 0)
+				kfifo_free(&kcompress[i].write_fifo);
 			return -ENOMEM;
 		}
 	}
@@ -200,8 +203,8 @@ static void clean_bio_queue(int idx)
 
 	while (sizeof(struct write_work) == kfifo_out(&kcompress[idx].write_fifo,
 				&entry, sizeof(struct write_work))) {
-		bio_put(entry.bio);
 		entry.cb(entry.mem, entry.bio);
+		bio_put(entry.bio);
 	}
 	kfifo_free(&kcompress[idx].write_fifo);
 }
@@ -217,14 +220,14 @@ static int kcompress_update(void)
 
 	kcompressd_para = kvmalloc_array(nr_kcompressd, sizeof(struct kcompressd_para), GFP_KERNEL);
 	if (!kcompressd_para) {
-		kfree(kcompress);
+		kvfree(kcompress);
 		return -ENOMEM;
 	}
 
 	ret = init_write_queue();
 	if (ret) {
-		kfree(kcompressd_para);
-		kfree(kcompress);
+		kvfree(kcompressd_para);
+		kvfree(kcompress);
 		pr_err("Initialization of writing to FIFOs failed!!\n");
 		return ret;
 	}

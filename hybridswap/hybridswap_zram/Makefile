@@ -16,4 +16,7 @@ obj-$(CONFIG_HYBRID_ZSMALLOC)	+= hybrid_zsmalloc.o
 ccflags-y += -DCONFIG_HYBRIDSWAP=1
 ccflags-y += -DCONFIG_HYBRIDSWAP_SWAPD=1
 ccflags-y += -DCONFIG_HYBRIDSWAP_CORE=1
+ccflags-y += -DCONFIG_CRYPTO_LZ4K=1
+ccflags-y += -DCONFIG_CRYPTO_ZSTDN=1
+ccflags-y += -DCONFIG_CRYPTO_ZSTDN_O=1
 ccflags-y += -I$(src)

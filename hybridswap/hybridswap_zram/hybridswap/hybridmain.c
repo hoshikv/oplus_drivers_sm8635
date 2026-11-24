@@ -51,7 +51,7 @@ static const char *swapd_text[NR_EVENT_ITEMS] = {
 #endif
 };
 
-static int log_level = HYB_MAX;
+static int log_level = HS_LOG_ERR;
 static struct kmem_cache *hybridswap_cache;
 static struct list_head score_head;
 static DEFINE_SPINLOCK(score_list_lock);
@@ -121,16 +121,16 @@ ssize_t hybridswap_vmstat_show(struct device *dev,
 	all_hybridswap_vm_events(vm_buf);
 
 #ifdef CONFIG_HYBRIDSWAP_SWAPD
-	len += snprintf(buf + len, PAGE_SIZE - len, "%-32s %12lu\n",
+	len += scnprintf(buf + len, PAGE_SIZE - len, "%-32s %12lu\n",
 			"fault_out_pause", atomic_long_read(hybridswapd_ops->fault_out_pause));
-	len += snprintf(buf + len, PAGE_SIZE - len, "%-32s %12lu\n",
+	len += scnprintf(buf + len, PAGE_SIZE - len, "%-32s %12lu\n",
 			"fault_out_pause_cnt", atomic_long_read(hybridswapd_ops->fault_out_pause_cnt));
 #endif
 
 	for (;i < NR_EVENT_ITEMS; i++) {
-		len += snprintf(buf + len, PAGE_SIZE - len, "%-32s %12lu\n",
+		len += scnprintf(buf + len, PAGE_SIZE - len, "%-32s %12lu\n",
 				swapd_text[i], vm_buf[i]);
-		if (len == PAGE_SIZE)
+		if (len >= PAGE_SIZE - 1)
 			break;
 	}
 	kfree(vm_buf);
@@ -141,11 +141,9 @@ ssize_t hybridswap_vmstat_show(struct device *dev,
 ssize_t hybridswap_loglevel_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t len)
 {
-	char *type_buf = NULL;
 	unsigned long val;
 
-	type_buf = strstrip((char *)buf);
-	if (kstrtoul(type_buf, 0, &val))
+	if (kstrtoul(buf, 0, &val))
 		return -EINVAL;
 
 	if (val >= HYB_MAX) {

@@ -321,7 +321,8 @@ mbuild cpufreq_health "$FB/cpufreq_health" "$OUT/msym/sched_info.symvers" "${NEW
 # ===========================================================================
 log "hybridswap / mm"
 
-inject_defines "$HS_M/hybridswap_zram" CONFIG_HYBRIDSWAP CONFIG_HYBRIDSWAP_SWAPD CONFIG_HYBRIDSWAP_CORE
+inject_defines "$HS_M/hybridswap_zram" CONFIG_HYBRIDSWAP CONFIG_HYBRIDSWAP_SWAPD CONFIG_HYBRIDSWAP_CORE \
+  CONFIG_CRYPTO_LZ4K CONFIG_CRYPTO_ZSTDN CONFIG_CRYPTO_ZSTDN_O
 
 # child crypto modules first
 mbuild lz4k "$HS_M/hybridswap_zram/lz4k" "" "" CONFIG_CRYPTO_LZ4K=m

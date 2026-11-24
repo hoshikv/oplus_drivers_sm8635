@@ -66,7 +66,7 @@ struct hybridswapd_task {
 #define ZRAM_WM_RATIO 75
 #define COMPRESS_RATIO 30
 #define SWAPD_MAX_LEVEL_NUM 10
-#define SWAPD_DEFAULT_BIND_CPUS "0-3"
+#define SWAPD_DEFAULT_BIND_CPUS "0-2"
 #define MAX_RECLAIMIN_SZ (200llu << 20)
 #define page_to_kb(nr) (nr << (PAGE_SHIFT - 10))
 #define SWAPD_SHRINK_WINDOW (HZ * 10)
@@ -1342,7 +1342,7 @@ static bool is_cpu_busy(void)
 
 	cpumask_clear(&mask);
 
-	for (i = 0; i < 6; i++)
+	for (i = 0; i < 7; i++)
 		cpumask_set_cpu(i, &mask);
 
 	cpuload = get_cpu_load(1, &mask);
