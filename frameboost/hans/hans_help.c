@@ -211,9 +211,13 @@ void binder_alloc_handler(void *data, size_t size, size_t *free_async_space, int
 		|| (alloc->free_async_space < 100*1024))) {
 		rcu_read_lock();
 		p = find_task_by_vpid(alloc->pid);
+		if (p)
+			get_task_struct(p);
 		rcu_read_unlock();
-		if (p != NULL && is_frozen_tg(p)) {
-			hans_report(ASYNC_BINDER, task_tgid_nr(current), task_uid(current).val, task_tgid_nr(p), task_uid(p).val, "free_buffer_full", -1);
+		if (p != NULL) {
+			if (is_frozen_tg(p))
+				hans_report(ASYNC_BINDER, task_tgid_nr(current), task_uid(current).val, task_tgid_nr(p), task_uid(p).val, "free_buffer_full", -1);
+			put_task_struct(p);
 		}
 	}
 	//should_fail is used by stability team to control whether this alloc should be prevented, hans should not use should_fail
@@ -238,9 +242,13 @@ void binder_alloc_handler(void *data, size_t size, size_t *free_async_space, int
 		|| (alloc->free_async_space < 100*1024))) {
 		rcu_read_lock();
 		p = find_task_by_vpid(alloc->pid);
+		if (p)
+			get_task_struct(p);
 		rcu_read_unlock();
-		if (p != NULL && is_frozen_tg(p)) {
-			hans_report(ASYNC_BINDER, task_tgid_nr(current), task_uid(current).val, task_tgid_nr(p), task_uid(p).val, "free_buffer_full", -1);
+		if (p != NULL) {
+			if (is_frozen_tg(p))
+				hans_report(ASYNC_BINDER, task_tgid_nr(current), task_uid(current).val, task_tgid_nr(p), task_uid(p).val, "free_buffer_full", -1);
+			put_task_struct(p);
 		}
 	}
 }
@@ -257,9 +265,13 @@ void binder_alloc_handler(void *data, size_t size, struct binder_alloc *alloc, i
 		|| (alloc->free_async_space < 100*1024))) {
 		rcu_read_lock();
 		p = find_task_by_vpid(alloc->pid);
+		if (p)
+			get_task_struct(p);
 		rcu_read_unlock();
-		if (p != NULL && is_frozen_tg(p)) {
-			hans_report(ASYNC_BINDER, task_tgid_nr(current), task_uid(current).val, task_tgid_nr(p), task_uid(p).val, "free_buffer_full", -1);
+		if (p != NULL) {
+			if (is_frozen_tg(p))
+				hans_report(ASYNC_BINDER, task_tgid_nr(current), task_uid(current).val, task_tgid_nr(p), task_uid(p).val, "free_buffer_full", -1);
+			put_task_struct(p);
 		}
 	}
 }

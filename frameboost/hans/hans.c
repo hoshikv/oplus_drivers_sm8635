@@ -101,7 +101,7 @@ int hans_report(enum message_type type, int caller_pid, int caller_uid, int targ
         struct sk_buff *skb = NULL;
 
         if (atomic_read(&hans_deamon_port) == -1) {
-                pr_err("%s: hans_deamon_port invalid!\n", __func__);
+                pr_err_ratelimited("%s: hans_deamon_port invalid!\n", __func__);
                 return HANS_ERROR;
         }
 

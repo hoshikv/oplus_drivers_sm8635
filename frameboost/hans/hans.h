@@ -185,12 +185,7 @@ void binder_alloc_handler(void *data, size_t size, struct binder_alloc *alloc, i
 static inline bool is_belong_cpugrp(struct task_struct *task)
 {
 	if (task->sched_task_group != NULL) {
-		struct cfs_bandwidth cfs_b = task->sched_task_group->cfs_bandwidth;
-		if (cfs_b.quota != -1) {
-			return true;
-		} else if (cfs_b.quota == -1) {
-			return false;
-		}
+		return READ_ONCE(task->sched_task_group->cfs_bandwidth.quota) != RUNTIME_INF;
 	}
 
 	return false;
