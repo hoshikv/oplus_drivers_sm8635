@@ -45,7 +45,6 @@ oplus_drivers_sm8635/
 │   ├── async_reclaim_opt/
 │   ├── dump_tasks_mem/
 │   ├── dynamic_readahead/
-│   ├── exit_mm_optimize/
 │   ├── gloom/
 │   ├── kswapd_opt/
 │   ├── mm_osvelte/
@@ -91,8 +90,7 @@ oplus_drivers_sm8635/
 ├── ipc/
 │   └── ipc_vipthread/
 ├── misc/
-│   ├── devinfo/
-│   └── healthinfo/
+│   └── devinfo/
 ├── storage/
 │   ├── io_metrics/
 │   └── storage/
@@ -146,13 +144,13 @@ The script:
 |---|---|---|
 | `frameboost/` | sched stack, cpufreq, UAG/UAD, HANS, AFS, game and task boosting | `vendor/oplus/kernel/cpu/*` |
 | `hybridswap/` | zram, hybridswap core/swapd, zstd/lz4k compressors, zram tuning, ODM scripts | `vendor/oplus/kernel/mm/{hybridswap_zram,zstd,zram_opt}/*` |
-| `mm/` | osvelte, exit-mm, readahead, uxmem, kswapd, proactive compaction, async reclaim, zsmalloc, process reclaim, gloom | `vendor/oplus/kernel/mm/*` |
+| `mm/` | osvelte, readahead, uxmem, kswapd, proactive compaction, async reclaim, zsmalloc, process reclaim, gloom | `vendor/oplus/kernel/mm/*` |
 | `net/` | data module, linkpower, app monitor, DNS hook, game-first, network tuning, QR scan, score, socket stats, vnet | `vendor/oplus/kernel/network/*` |
 | `power/` | process freeze, proc load, RPMh decoupling, standby netlink, subsystem sleep monitor | `vendor/oplus/kernel/power/*` |
 | `boot/` | boot mode, bootloader log, cmdline parser, HTB/tango32, custom, phoenix, watchdog, bootprof, project info, shutdown reason | `vendor/oplus/kernel/boot/*`, `vendor/oplus/kernel/system/*` |
 | `debug/` | fault injection (DFR), memleak detection, SIGKILL diagnosis, stability/binder watcher | `vendor/oplus/kernel/{dfr,debug,stability}/*` |
 | `ipc/` | binder VIP thread policy and hash/sysfs interface | `vendor/oplus/kernel/ipc/*` |
-| `misc/` | device info and healthinfo (CPU/memory/IO health reporting) | `vendor/oplus/kernel/{devinfo,healthinfo}/*` |
+| `misc/` | device info | `vendor/oplus/kernel/devinfo/*` |
 | `storage/` | IO metrics (block/F2FS) and UFS/storage debug helpers | `vendor/oplus/kernel/storage/*` |
 | `tools/` | `rust-perf` userspace helper (not a kernel module) | local tooling |
 

@@ -12,7 +12,7 @@
 #   boot/         boot/project/shutdown modules
 #   debug/        stability/dfr/memleak/sigkill
 #   ipc/          binder VIP thread
-#   misc/         devinfo/healthinfo
+#   misc/         devinfo
 #   storage/      io metrics / storage
 #   include/      shared soc/oplus headers
 #   tools/        userspace helpers
@@ -153,7 +153,7 @@ done
 for d in hybridswap_zram zstd_o zram_opt; do
   copy_module "$HS_DIR/$d" "$HS_M/$d"
 done
-for d in mm_osvelte exit_mm_optimize dynamic_readahead uxmem_opt kswapd_opt \
+for d in mm_osvelte dynamic_readahead uxmem_opt kswapd_opt \
          proactive_compact dump_tasks_mem async_reclaim_opt zsmalloc_opt \
          process_reclaim gloom; do
   copy_module "$MM_DIR/$d" "$HS_M/$d"
@@ -343,7 +343,6 @@ mbuild crypto_zstdn_o "$HS_M/zstd_o" "$OUT/msym/mm_osvelte.symvers" "" \
 NEW_HS_EXTRA="$OUT/msym/sched_assist.symvers $OUT/msym/sched_info.symvers $OUT/msym/eas_opt.symvers $OUT/msym/mm_osvelte.symvers"
 NEW_HS_KC="${NEW_KCFLAGS[*]}"
 
-mbuild exit_mm_optimize    "$HS_M/exit_mm_optimize"    "$NEW_HS_EXTRA" "$NEW_HS_KC" CONFIG_OPLUS_EXIT_MM_OPTIMIZE=m
 mbuild dynamic_readahead   "$HS_M/dynamic_readahead"   "$NEW_HS_EXTRA" "$NEW_HS_KC" CONFIG_OPLUS_FEATURE_DYNAMIC_READAHEAD=m
 mbuild uxmem_opt           "$HS_M/uxmem_opt"           "$NEW_HS_EXTRA" "$NEW_HS_KC" CONFIG_OPLUS_FEATURE_UXMEM_OPT=m
 mbuild kswapd_opt          "$HS_M/kswapd_opt"          "$NEW_HS_EXTRA" "$NEW_HS_KC" CONFIG_OPLUS_FEATURE_KSWAPD_OPT=m
@@ -389,7 +388,6 @@ inject_defines "$M"
 mbuild oplus_projectinfo "$M" "" "" \
   CONFIG_OPLUS_FEATURE_OPROJECT=m CONFIG_OPLUS_SYSTEM_KERNEL_QCOM=y
 
-mbuild_cat healthinfo misc healthinfo "" "" CONFIG_OPLUS_FEATURE_HEALTHINFO=m
 mbuild_cat vnet net vnet "" "" CONFIG_OPLUS_FEATURE_VIRTUAL_NET=m
 
 # NEW: game_opt (task_boost subdir needs -I$(src) to reach parent game_ctrl.h)
@@ -397,10 +395,9 @@ M="$(stage_module frameboost game_opt)"
 inject_defines "$M"
 mbuild game_opt "$M" "$NEW_OP_EXTRA" "$NEW_OP_KC" CONFIG_OPLUS_FEATURE_GAME_OPT=m
 
-# NEW: level_protect + fg_protect (same dir, two objs)
+# NEW: level_protect
 M="$(stage_module frameboost levelprotect)"
-mbuild level_protect "$M" "$NEW_OP_EXTRA" "$NEW_OP_KC" \
-  CONFIG_OPLUS_LEVEL_PROTECT=m CONFIG_OPLUS_FG_PROTECT=m
+mbuild level_protect "$M" "$NEW_OP_EXTRA" "$NEW_OP_KC" CONFIG_OPLUS_LEVEL_PROTECT=m
 
 # NEW: sigkill_diagnosis
 mbuild_cat sigkill_diagnosis debug sigkill_diagnosis "$NEW_OP_EXTRA" "$NEW_OP_KC" \
@@ -506,13 +503,13 @@ oplus_hans oplus_bsp_qos_sched oplus_bsp_sched_assist oplus_bsp_schedtune
 crypto_zstdn oplus_bsp_hybridswap_zram oplus_bsp_lz4k
 oplus_bsp_midas oplus_bsp_task_load oplus_bsp_task_sched oplus_bsp_zram_opt
 oplus_bootprof oplus_shutdown_reason oplus_bsp_boot_projectinfo
-oplus_bsp_healthinfo oplus_vnet
+oplus_vnet
 oplus_bsp_schedinfo oplus_bsp_cpufreq_health
-oplus_exit_mm_optimize oplus_bsp_dynamic_readahead oplus_bsp_uxmem_opt
+oplus_bsp_dynamic_readahead oplus_bsp_uxmem_opt
 oplus_bsp_kshrink_slabd oplus_bsp_pcppages_opt oplus_bsp_kswapd_opt
 oplus_bsp_proactive_compact oplus_bsp_dump_tasks_mm crypto_zstdn_o
 oplus_bsp_mm_osvelte oplus_bsp_game_opt oplus_bsp_level_protect
-oplus_bsp_fg_protect oplus_bsp_sigkill_diagnosis
+oplus_bsp_sigkill_diagnosis
 cpufreq_bouncing cpufreq_effiency oplus_bsp_cpu_game oplus_bsp_omrg
 oplus_bsp_waker_identify oplus_bsp_task_cpustats
 oplus_freeze_process oplus_procs_load oplus_rpmh_statics oplus_standby_netlink

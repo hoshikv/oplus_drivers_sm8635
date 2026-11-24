@@ -79,11 +79,7 @@ static unsigned int oplus_kstat_irqs(unsigned int irq)
 
 static int oplus_task_curr(const struct task_struct *p)
 {
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
-	return p->__state & TASK_RUNNING;
-#else
-	return p->state & TASK_RUNNING;
-#endif
+	return READ_ONCE(p->on_cpu);
 }
 #endif
 
@@ -236,11 +232,7 @@ void oplus_dump_wdog_cpu(struct task_struct *w_task)
 	update_irq_counter();
 	print_top10_irqs();
 	work_cpu = task_cpu(w_task);
-#if IS_MODULE(CONFIG_OPLUS_FEATURE_QCOM_WATCHDOG)
 	wdog_busy = oplus_task_curr(w_task);
-#else
-	wdog_busy = task_curr(w_task);
-#endif
 	if (wdog_busy)
 		printk(KERN_EMERG "Watchdog work is running at CPU(%d)\n", work_cpu);
 	else
