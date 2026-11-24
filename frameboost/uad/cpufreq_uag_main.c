@@ -1755,8 +1755,10 @@ static ssize_t target_loads_store(struct gov_attr_set *attr_set, const char *buf
 		return PTR_ERR(new_target_loads);
 
 	new_util_loads = kzalloc(ntokens * sizeof(unsigned int), GFP_KERNEL);
-	if (!new_util_loads)
+	if (!new_util_loads) {
+		kfree(new_target_loads);
 		return -ENOMEM;
+	}
 
 	memcpy(new_util_loads, new_target_loads, sizeof(unsigned int) * ntokens);
 
@@ -1788,6 +1790,7 @@ ssize_t set_sugov_tl_uag(unsigned int cpu, char *buf)
 	struct uag_gov_tunables *tunables;
 	struct gov_attr_set *attr_set;
 	size_t count;
+	ssize_t ret;
 
 	if (!buf)
 		return -EFAULT;
@@ -1796,18 +1799,29 @@ ssize_t set_sugov_tl_uag(unsigned int cpu, char *buf)
 	if (!policy)
 		return -ENODEV;
 
-	sg_policy = policy->governor_data;
-	if (!sg_policy)
+	if (policy->governor != &cpufreq_uag_gov) {
+		cpufreq_cpu_put(policy);
 		return -EINVAL;
+	}
+
+	sg_policy = policy->governor_data;
+	if (!sg_policy) {
+		cpufreq_cpu_put(policy);
+		return -EINVAL;
+	}
 
 	tunables = sg_policy->tunables;
-	if (!tunables)
+	if (!tunables) {
+		cpufreq_cpu_put(policy);
 		return -ENOMEM;
+	}
 
 	attr_set = &tunables->attr_set;
 	count = strlen(buf);
 
-	return target_loads_store(attr_set, buf, count);
+	ret = target_loads_store(attr_set, buf, count);
+	cpufreq_cpu_put(policy);
+	return ret;
 }
 EXPORT_SYMBOL_GPL(set_sugov_tl_uag);
 #endif
@@ -2032,8 +2046,10 @@ static ssize_t multi_tl_sys_store(struct gov_attr_set *attr_set,
 		return PTR_ERR(new_target_loads);
 
 	new_util_loads = kzalloc(ntokens * sizeof(unsigned int), GFP_KERNEL);
-	if (!new_util_loads)
+	if (!new_util_loads) {
+		kfree(new_target_loads);
 		return -ENOMEM;
+	}
 
 	memcpy(new_util_loads, new_target_loads, sizeof(unsigned int) * ntokens);
 	for (i = 0; i < ntokens - 1; i += 2)
